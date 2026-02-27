@@ -10,90 +10,96 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             background: transparent;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
         }
-        
-        .iframe-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        
-        iframe {
+
+        .iframe-wrapper {
             position: absolute;
+            /* Push the top up to hide the iframe header bar (adjust px as needed) */
             top: -80px;
             left: 0;
+            right: 0;
+            /* Add extra height to compensate for the hidden top */
+            bottom: -80px;
+            overflow: hidden;
+        }
+
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: calc(100% + 80px);
+            height: 100%;
             border: none;
+
             /* ⚠️ ADJUST THIS NUMBER TO CHANGE SIZE */
             /* 1.0 = normal, 1.5 = 50% bigger, 2.0 = double size, 0.8 = smaller */
             transform: scale(0.5);
-            transform-origin: center center;
+            transform-origin: top left;
+            width: 200%;  /* Counteract scale(0.5) so content fills the screen */
+            height: 200%;
         }
     </style>
 </head>
 <body>
-    <div class="iframe-container">
-        <iframe id="dayFrame" src="https://script.google.com/a/macros/iskl.edu.my/s/AKfycbzTY7uzTeBxw8SIhY2J0gzJ9oZUavoCCT9xkA6Ng971UCMPlYc4cjP8rc3YXfblxWiLow/exec"></iframe>
+    <div class="iframe-wrapper">
+        <iframe id="dayFrame"></iframe>
     </div>
-    
+
     <script>
         const iframe = document.getElementById('dayFrame');
-        
-        // Prevent iframe from navigating away or reloading
-        iframe.addEventListener('load', function() {
-            console.log('Iframe loaded - content locked until midnight');
-            
-            // Prevent any further navigation in the iframe
-            try {
-                // This stops most internal redirects
-                iframe.contentWindow.onbeforeunload = function() {
-                    return false;
-                };
-            } catch(e) {
-                // Cross-origin restriction - that's okay
-                console.log('Cross-origin iframe detected');
-            }
+        const BASE_URL = 'https://script.google.com/a/macros/iskl.edu.my/s/AKfycbzTY7uzTeBxw8SIhY2J0gzJ9oZUavoCCT9xkA6Ng971UCMPlYc4cjP8rc3YXfblxWiLow/exec';
+
+        function loadIframe() {
+            // Use a timestamp (epoch ms) instead of date string so each midnight
+            // reload is genuinely unique and avoids any caching issues
+            iframe.src = BASE_URL + '?t=' + Date.now();
+            console.log('Iframe loaded at', new Date().toLocaleTimeString());
+        }
+
+        iframe.addEventListener('load', function () {
+            console.log('Iframe content loaded successfully');
         });
-        
+
+        iframe.addEventListener('error', function () {
+            console.warn('Iframe failed to load — retrying in 30 seconds');
+            setTimeout(loadIframe, 30000);
+        });
+
         // Calculate milliseconds until midnight
-        function getMillisecondsUntilMidnight() {
+        function msUntilMidnight() {
             const now = new Date();
             const midnight = new Date(now);
-            midnight.setHours(24, 0, 0, 0); // Next midnight
+            midnight.setHours(24, 0, 0, 0);
             return midnight - now;
         }
-        
-        // Refresh at midnight to get new day
-        function scheduleRefreshAtMidnight() {
-            const msUntilMidnight = getMillisecondsUntilMidnight();
-            const minutesUntilMidnight = Math.floor(msUntilMidnight / 1000 / 60);
-            console.log('Day locked. Will refresh at midnight in', minutesUntilMidnight, 'minutes');
-            
-            setTimeout(function() {
-                console.log('Midnight refresh triggered - loading new day');
-                location.reload();
-            }, msUntilMidnight);
+
+        // Reload the iframe (not the whole page) at midnight so the new day loads
+        // without the risk of the page itself failing to reload on a signage device
+        function scheduleRefresh() {
+            const ms = msUntilMidnight();
+            console.log('Next refresh in', Math.round(ms / 60000), 'minutes');
+
+            setTimeout(function () {
+                console.log('Midnight — refreshing iframe for new day');
+                loadIframe();
+                scheduleRefresh(); // Schedule the next midnight refresh
+            }, ms);
         }
-        
-        // Add cache-busting parameter to iframe URL to ensure fresh content
-        const originalSrc = iframe.src;
-        iframe.src = originalSrc + (originalSrc.includes('?') ? '&' : '?') + 't=' + new Date().toDateString();
-        
-        // Start the midnight refresh scheduler
-        scheduleRefreshAtMidnight();
-        
-        // Keep the page alive - prevent any sleep/idle issues
-        setInterval(function() {
-            console.log('Keepalive ping');
-        }, 60000); // Every minute
+
+        // Initial load
+        loadIframe();
+        scheduleRefresh();
+
+        // Keepalive — prevents the browser tab/kiosk from going idle
+        setInterval(function () {
+            console.log('Keepalive', new Date().toLocaleTimeString());
+        }, 60000);
     </script>
 </body>
 </html>

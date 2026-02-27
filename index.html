@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Display</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        iframe {
+            position: absolute;
+            top: -80px;
+            left: 0;
+            width: 100%;
+            height: calc(100% + 80px);
+            border: none;
+            /* ⚠️ ADJUST THIS NUMBER TO CHANGE SIZE */
+            /* 1.0 = normal, 1.5 = 50% bigger, 2.0 = double size, 0.8 = smaller */
+            transform: scale(0.5);
+            transform-origin: center center;
+        }
+    </style>
+</head>
+<body>
+    <div class="iframe-container">
+        <iframe id="dayFrame" src="https://script.google.com/a/macros/iskl.edu.my/s/AKfycbzTY7uzTeBxw8SIhY2J0gzJ9oZUavoCCT9xkA6Ng971UCMPlYc4cjP8rc3YXfblxWiLow/exec"></iframe>
+    </div>
+    
+    <script>
+        const iframe = document.getElementById('dayFrame');
+        
+        // Prevent iframe from navigating away or reloading
+        iframe.addEventListener('load', function() {
+            console.log('Iframe loaded - content locked until midnight');
+            
+            // Prevent any further navigation in the iframe
+            try {
+                // This stops most internal redirects
+                iframe.contentWindow.onbeforeunload = function() {
+                    return false;
+                };
+            } catch(e) {
+                // Cross-origin restriction - that's okay
+                console.log('Cross-origin iframe detected');
+            }
+        });
+        
+        // Calculate milliseconds until midnight
+        function getMillisecondsUntilMidnight() {
+            const now = new Date();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0); // Next midnight
+            return midnight - now;
+        }
+        
+        // Refresh at midnight to get new day
+        function scheduleRefreshAtMidnight() {
+            const msUntilMidnight = getMillisecondsUntilMidnight();
+            const minutesUntilMidnight = Math.floor(msUntilMidnight / 1000 / 60);
+            console.log('Day locked. Will refresh at midnight in', minutesUntilMidnight, 'minutes');
+            
+            setTimeout(function() {
+                console.log('Midnight refresh triggered - loading new day');
+                location.reload();
+            }, msUntilMidnight);
+        }
+        
+        // Add cache-busting parameter to iframe URL to ensure fresh content
+        const originalSrc = iframe.src;
+        iframe.src = originalSrc + (originalSrc.includes('?') ? '&' : '?') + 't=' + new Date().toDateString();
+        
+        // Start the midnight refresh scheduler
+        scheduleRefreshAtMidnight();
+        
+        // Keep the page alive - prevent any sleep/idle issues
+        setInterval(function() {
+            console.log('Keepalive ping');
+        }, 60000); // Every minute
+    </script>
+</body>
+</html>

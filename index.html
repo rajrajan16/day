@@ -45,20 +45,36 @@
 
         function scheduleRefresh() {
             const ms = msUntilMidnight();
-            console.log('Next refresh in', Math.round(ms / 60000), 'minutes');
             setTimeout(function () {
-                console.log('Midnight — refreshing iframe for new day');
                 loadIframe();
                 scheduleRefresh();
             }, ms);
         }
 
+        // Prevent screen from sleeping (works on Chrome/Edge kiosk)
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake lock active');
+                // Re-acquire if released (e.g. tab goes background then returns)
+                wakeLock.addEventListener('release', () => {
+                    console.log('Wake lock released — reacquiring...');
+                    requestWakeLock();
+                });
+            } catch (e) {
+                console.warn('Wake lock failed:', e.message);
+            }
+        }
+
+        // Re-acquire wake lock when page becomes visible again
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') requestWakeLock();
+        });
+
         loadIframe();
         scheduleRefresh();
-
-        setInterval(function () {
-            console.log('Keepalive', new Date().toLocaleTimeString());
-        }, 60000);
+        requestWakeLock();
     </script>
 </body>
 </html>

@@ -1,0 +1,66 @@
+name: Update Day from Calendar
+
+on:
+  schedule:
+    # Runs at 11:50 PM Malaysia time (15:50 UTC) every day
+    - cron: '50 15 * * *'
+  # Allows manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-day:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Fetch calendar and extract today's day
+        run: |
+          # Fetch the iCal feed
+          curl -L "https://calendar.google.com/calendar/ical/iskl.edu.my_7fqt0f2sj8odprhnalgdsa1a5k%40group.calendar.google.com/public/basic.ics" -o calendar.ics
+          
+          # Get today's date in YYYYMMDD format
+          TODAY=$(date +%Y%m%d)
+          echo "Today's date: $TODAY"
+          
+          # Look for today's all-day event containing "Day"
+          DAY_EVENT=$(grep -B5 -A5 "DTSTART;VALUE=DATE:$TODAY" calendar.ics | grep "SUMMARY" | grep -i "day" | head -1 | sed 's/SUMMARY://' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+          
+          # If found, use it; otherwise use yesterday's Day (for after midnight)
+          if [ -z "$DAY_EVENT" ]; then
+            echo "No Day event found for today, checking yesterday..."
+            YESTERDAY=$(date -d "yesterday" +%Y%m%d)
+            DAY_EVENT=$(grep -B5 -A5 "DTSTART;VALUE=DATE:$YESTERDAY" calendar.ics | grep "SUMMARY" | grep -i "day" | head -1 | sed 's/SUMMARY://' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+          fi
+          
+          # If still nothing, default to "Day 1"
+          if [ -z "$DAY_EVENT" ]; then
+            DAY_EVENT="Day 1"
+            echo "No Day event found, using default: Day 1"
+          fi
+          
+          echo "Day event: $DAY_EVENT"
+          
+          # Create JSON file
+          echo "{\"day\":\"$DAY_EVENT\",\"date\":\"$TODAY\"}" > day.json
+          
+          # Show the result
+          cat day.json
+      
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add day.json
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update day.json for $TODAY"
+            git push
+            echo "Changes pushed successfully"
+          fi

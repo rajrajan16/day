@@ -1,12 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Day Display</title>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             background: transparent;
             overflow: hidden;
@@ -15,55 +19,90 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: Arial, Helvetica, sans-serif;
         }
+        
+        .day-container {
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
         #dayLabel {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 8rem;
-            font-weight: 800;
-            color: #ffffff;
-            text-shadow: 0 2px 12px rgba(0,0,0,0.4);
-            letter-spacing: -0.02em;
+            font-size: 8vw;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        
+        #dateLabel {
+            font-size: 3vw;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+        
+        .loading {
+            color: white;
+            font-size: 4vw;
+        }
+        
+        .error {
+            color: #ff9999;
+            font-size: 3vw;
         }
     </style>
 </head>
 <body>
-    <div id="dayLabel"></div>
+    <div class="day-container">
+        <div id="dayLabel" class="loading">Loading...</div>
+        <div id="dateLabel"></div>
+    </div>
+
     <script>
-        const CALENDAR_ID = 'iskl.edu.my_7fqt0f2sj8odprhnalgdsa1a5k@group.calendar.google.com';
-        const ICAL_URL = 'https://calendar.google.com/calendar/ical/' + encodeURIComponent(CALENDAR_ID) + '/public/basic.ics';
-        const PROXY = 'https://corsproxy.io/?url=';
-
-        function todayStr() {
-            const n = new Date();
-            return `${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}${String(n.getDate()).padStart(2,'0')}`;
-        }
-
-        async function fetchDay() {
+        async function getDayFromCalendar() {
             try {
-                const res = await fetch(PROXY + encodeURIComponent(ICAL_URL));
-                const text = await res.text();
-                const today = todayStr();
-                const blocks = text.split('BEGIN:VEVENT');
-                for (let i = 1; i < blocks.length; i++) {
-                    const b = blocks[i];
-                    const summary = (b.match(/SUMMARY[^:]*:([^\r\n]+)/) || [])[1] || '';
-                    const dtstart = (b.match(/DTSTART[^:]*:([^\r\n]+)/) || [])[1] || '';
-                    if (/^\d{8}$/.test(dtstart.trim()) && dtstart.trim() === today && /^day\s*\d+/i.test(summary.trim())) {
-                        document.getElementById('dayLabel').textContent = summary.trim();
-                        return;
+                // Fetch the day.json file (updated daily by GitHub Action)
+                const response = await fetch('./day.json?t=' + Date.now());
+                const data = await response.json();
+                
+                if (data.day && data.day.toLowerCase().includes('day')) {
+                    document.getElementById('dayLabel').textContent = data.day;
+                    
+                    // Format date nicely
+                    if (data.date) {
+                        const year = data.date.substring(0,4);
+                        const month = data.date.substring(4,6);
+                        const day = data.date.substring(6,8);
+                        const date = new Date(year, month-1, day);
+                        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        document.getElementById('dateLabel').textContent = date.toLocaleDateString('en-US', options);
                     }
+                } else {
+                    document.getElementById('dayLabel').textContent = 'No Day Event Today';
                 }
-                document.getElementById('dayLabel').textContent = '';
-            } catch (e) {}
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('dayLabel').textContent = 'Day 1'; // Fallback
+                document.getElementById('dayLabel').className = 'error';
+            }
         }
 
-        fetchDay();
-        setInterval(fetchDay, 30 * 60 * 1000);
-        (function scheduleMidnight() {
+        // Load immediately
+        getDayFromCalendar();
+        
+        // Refresh every hour (just in case)
+        setInterval(getDayFromCalendar, 60 * 60 * 1000);
+        
+        // Reload page at midnight to ensure fresh data
+        function msUntilMidnight() {
             const now = new Date();
-            const midnight = new Date(now); midnight.setHours(24,0,0,0);
-            setTimeout(() => { fetchDay(); scheduleMidnight(); }, midnight - now);
-        })();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0);
+            return midnight - now;
+        }
+        
+        setTimeout(() => {
+            window.location.reload();
+        }, msUntilMidnight());
     </script>
 </body>
 </html>

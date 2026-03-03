@@ -22,77 +22,47 @@
             font-family: Arial, Helvetica, sans-serif;
         }
         
-        .day-container {
-            text-align: center;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        
         #dayLabel {
-            font-size: 8vw;
+            color: white;
+            font-size: 10vw;
             font-weight: bold;
-            line-height: 1.2;
-        }
-        
-        #dateLabel {
-            font-size: 3vw;
-            opacity: 0.9;
-            margin-top: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            line-height: 1;
         }
         
         .loading {
             color: white;
-            font-size: 4vw;
-        }
-        
-        .error {
-            color: #ff9999;
-            font-size: 3vw;
+            font-size: 5vw;
         }
     </style>
 </head>
 <body>
-    <div class="day-container">
-        <div id="dayLabel" class="loading">Loading...</div>
-        <div id="dateLabel"></div>
-    </div>
+    <div id="dayLabel" class="loading">Loading...</div>
 
     <script>
         async function getDayFromCalendar() {
             try {
-                // Fetch the day.json file (updated daily by GitHub Action)
                 const response = await fetch('./day.json?t=' + Date.now());
                 const data = await response.json();
                 
                 if (data.day && data.day.toLowerCase().includes('day')) {
                     document.getElementById('dayLabel').textContent = data.day;
-                    
-                    // Format date nicely
-                    if (data.date) {
-                        const year = data.date.substring(0,4);
-                        const month = data.date.substring(4,6);
-                        const day = data.date.substring(6,8);
-                        const date = new Date(year, month-1, day);
-                        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                        document.getElementById('dateLabel').textContent = date.toLocaleDateString('en-US', options);
-                    }
                 } else {
-                    document.getElementById('dayLabel').textContent = 'No Day Event Today';
+                    document.getElementById('dayLabel').textContent = 'Day 1'; // Fallback
                 }
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('dayLabel').textContent = 'Day 1'; // Fallback
-                document.getElementById('dayLabel').className = 'error';
             }
         }
 
         // Load immediately
         getDayFromCalendar();
         
-        // Refresh every hour (just in case)
+        // Refresh every hour
         setInterval(getDayFromCalendar, 60 * 60 * 1000);
         
-        // Reload page at midnight to ensure fresh data
+        // Reload at midnight
         function msUntilMidnight() {
             const now = new Date();
             const midnight = new Date(now);

@@ -21,71 +21,37 @@
             width: 200%;
             height: 200%;
         }
-        video { display: none; }
     </style>
 </head>
 <body>
     <div class="iframe-wrapper">
         <iframe id="dayFrame"></iframe>
     </div>
-
-    <!-- Silent 1x1 blank video to trick browser into staying awake -->
-    <video id="keepawake" loop muted playsinline></video>
-
     <script>
         const iframe = document.getElementById('dayFrame');
         const BASE_URL = 'https://script.google.com/a/macros/iskl.edu.my/s/AKfycbzTY7uzTeBxw8SIhY2J0gzJ9oZUavoCCT9xkA6Ng971UCMPlYc4cjP8rc3YXfblxWiLow/exec';
 
-        // --- Keep screen awake ---
-
-        // Method 1: Silent blank video loop
-        function startVideoKeepAwake() {
-            const video = document.getElementById('keepawake');
-            // 1x1 black MP4 encoded as base64
-            video.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAA2JtZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjQ3OSBkZDc5YTYxIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiBzdHJlYWRzPTYgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTI1IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAmWWIhAAz//727L4FNf2f0JcRLMXaSnA+KqSAgHc0wAAAAwAAAwAAFgn0I7DkqgN3QAAAAwBBmiJsQn/+tSqAGGGAAHMAAAAHQZ5AhX8AAAMAAAMADpMAAAAHAZ5fakf/AAADAAADAAADAlBBmmZJqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5gAAAAB0GehEURLX8AAAMAAAMADpgAAAAHAZ6jakf/AAADAAADAAADAjBBmqhJqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5hAAAAB0GexkURLX8AAAMAAAMADpoAAAAHAZ7nakf/AAADAAADAAADAkBBmuxJqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5iAAAAB0Ge6kURLX8AAAMAAAMADpsAAAAHAZ8LZEf/AAADAAADAAADAiBBmy5JqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5jAAAAB0GfTEURLX8AAAMAAAMADpwAAAAHAZ9rakf/AAADAAADAAADAlBBm3BJqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5kAAAAB0GfbkURLX8AAAMAAAMADp0AAAAHAZ+NZEf/AAADAAADAAADAiBBm7JJqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5lAAAAB0Gfq0URLX8AAAMAAAMADp4AAAAHAZ/KZEf/AAADAAADAAADAkBBm+5JqEFsmUwIf//+qZYAAAMAAAMAAAMAAC5mAAAAB0Gf7EURL';
-            video.play().catch(() => {});
-        }
-
-        // Method 2: Wake Lock API as backup
-        async function requestWakeLock() {
-            try {
-                const lock = await navigator.wakeLock.request('screen');
-                lock.addEventListener('release', requestWakeLock);
-            } catch (e) {}
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') requestWakeLock();
-        });
-
-        // Method 3: requestAnimationFrame to keep JS thread active
-        (function keepJSAlive() {
-            requestAnimationFrame(keepJSAlive);
-        })();
-
-        // --- Iframe logic ---
         function loadIframe() {
             iframe.src = BASE_URL + '?t=' + Date.now();
+            console.log('Reloaded at', new Date().toLocaleTimeString());
         }
 
-        function msUntilMidnight() {
+        // Reload every 25 minutes to beat GAS session timeout
+        setInterval(loadIframe, 25 * 60 * 1000);
+
+        // Also reload at midnight for new day
+        function scheduleRefresh() {
             const now = new Date();
             const midnight = new Date(now);
             midnight.setHours(24, 0, 0, 0);
-            return midnight - now;
-        }
-
-        function scheduleRefresh() {
             setTimeout(function () {
                 loadIframe();
                 scheduleRefresh();
-            }, msUntilMidnight());
+            }, midnight - now);
         }
 
         loadIframe();
         scheduleRefresh();
-        startVideoKeepAwake();
-        requestWakeLock();
     </script>
 </body>
 </html>

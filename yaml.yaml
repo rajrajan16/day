@@ -26,6 +26,9 @@ jobs:
           TODAY=$(date +%Y%m%d)
           echo "Today's date: $TODAY"
           
+          # ✅ Export TODAY so next steps can use it
+          echo "TODAY=$TODAY" >> $GITHUB_ENV
+          
           # Look for today's all-day event containing "Day"
           DAY_EVENT=$(grep -B5 -A5 "DTSTART;VALUE=DATE:$TODAY" calendar.ics | grep "SUMMARY" | grep -i "day" | head -1 | sed 's/SUMMARY://' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
           
@@ -54,6 +57,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
+            # ✅ $TODAY now available via GITHUB_ENV
             git commit -m "Update day.json for $TODAY"
             git push
             echo "Changes pushed successfully"

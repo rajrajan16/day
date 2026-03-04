@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Day Display</title>
+    <title>Day Display - Debug</title>
     <style>
         * {
             margin: 0;
@@ -17,6 +17,7 @@
             width: 100vw;
             height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: Arial, Helvetica, sans-serif;
@@ -30,6 +31,15 @@
             line-height: 1;
         }
         
+        #debugInfo {
+            color: yellow;
+            font-size: 2vw;
+            margin-top: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
         .loading {
             color: white;
             font-size: 5vw;
@@ -38,6 +48,7 @@
 </head>
 <body>
     <div id="dayLabel" class="loading">Loading...</div>
+    <div id="debugInfo"></div>
 
     <script>
         async function getDayFromCalendar() {
@@ -45,34 +56,28 @@
                 const response = await fetch('./day.json?t=' + Date.now());
                 const data = await response.json();
                 
+                // Show debug info
+                document.getElementById('debugInfo').innerHTML = 
+                    `Debug: Found "${data.day}" for date ${data.date}`;
+                
                 if (data.day && data.day.toLowerCase().includes('day')) {
                     document.getElementById('dayLabel').textContent = data.day;
                 } else {
-                    document.getElementById('dayLabel').textContent = 'Day 1'; // Fallback
+                    document.getElementById('dayLabel').textContent = 'Day 1 (fallback)';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('dayLabel').textContent = 'Day 1'; // Fallback
+                document.getElementById('dayLabel').textContent = 'Day 1 (error)';
+                document.getElementById('debugInfo').innerHTML = 
+                    `Error: ${error.message}`;
             }
         }
 
         // Load immediately
         getDayFromCalendar();
         
-        // Refresh every hour
-        setInterval(getDayFromCalendar, 60 * 60 * 1000);
-        
-        // Reload at midnight
-        function msUntilMidnight() {
-            const now = new Date();
-            const midnight = new Date(now);
-            midnight.setHours(24, 0, 0, 0);
-            return midnight - now;
-        }
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, msUntilMidnight());
+        // Refresh every minute for debugging
+        setInterval(getDayFromCalendar, 60 * 1000);
     </script>
 </body>
 </html>

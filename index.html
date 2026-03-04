@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Day Display - Debug</title>
+    <title>Day Display</title>
     <style>
         * {
             margin: 0;
@@ -17,7 +17,6 @@
             width: 100vw;
             height: 100vh;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: Arial, Helvetica, sans-serif;
@@ -31,15 +30,6 @@
             line-height: 1;
         }
         
-        #debugInfo {
-            color: yellow;
-            font-size: 2vw;
-            margin-top: 20px;
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
         .loading {
             color: white;
             font-size: 5vw;
@@ -48,36 +38,64 @@
 </head>
 <body>
     <div id="dayLabel" class="loading">Loading...</div>
-    <div id="debugInfo"></div>
 
     <script>
         async function getDayFromCalendar() {
             try {
+                // Try to get from day.json first
                 const response = await fetch('./day.json?t=' + Date.now());
                 const data = await response.json();
                 
-                // Show debug info
-                document.getElementById('debugInfo').innerHTML = 
-                    `Debug: Found "${data.day}" for date ${data.date}`;
+                // Check if data is from today
+                const today = new Date();
+                const todayStr = today.getFullYear() + 
+                               String(today.getMonth() + 1).padStart(2,'0') + 
+                               String(today.getDate()).padStart(2,'0');
                 
-                if (data.day && data.day.toLowerCase().includes('day')) {
+                // If data is from today and has a day, use it
+                if (data.date === todayStr && data.day && data.day.toLowerCase().includes('day')) {
                     document.getElementById('dayLabel').textContent = data.day;
-                } else {
-                    document.getElementById('dayLabel').textContent = 'Day 1 (fallback)';
+                    return;
                 }
+                
+                // Otherwise calculate based on date (fallback)
+                console.log('Using calculated fallback');
+                calculateDayManually();
+                
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('dayLabel').textContent = 'Day 1 (error)';
-                document.getElementById('debugInfo').innerHTML = 
-                    `Error: ${error.message}`;
+                console.error('Error fetching day.json:', error);
+                calculateDayManually();
             }
+        }
+        
+        function calculateDayManually() {
+            // Simple calculation - you can adjust this based on your actual schedule
+            const today = new Date();
+            const startDate = new Date(2026, 2, 1); // March 1, 2026
+            const diffDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+            
+            // Cycle between Day 1 and Day 2 (every 2 days)
+            const dayNumber = (diffDays % 2) + 1;
+            document.getElementById('dayLabel').textContent = `Day ${dayNumber}`;
         }
 
         // Load immediately
         getDayFromCalendar();
         
-        // Refresh every minute for debugging
-        setInterval(getDayFromCalendar, 60 * 1000);
+        // Refresh every hour
+        setInterval(getDayFromCalendar, 60 * 60 * 1000);
+        
+        // Reload at midnight
+        function msUntilMidnight() {
+            const now = new Date();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0);
+            return midnight - now;
+        }
+        
+        setTimeout(() => {
+            window.location.reload();
+        }, msUntilMidnight());
     </script>
 </body>
 </html>

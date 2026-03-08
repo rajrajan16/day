@@ -2,8 +2,8 @@ name: Update Day from Calendar
 
 on:
   schedule:
-    # Runs at 7:00 AM Malaysia time (23:00 UTC) every day
-    - cron: '0 23 * * *'
+    # Runs at 6:00 AM Malaysia time (MYT = UTC+8), so 22:00 UTC
+    - cron: '0 22 * * *'
   # Allows manual trigger from GitHub Actions tab
   workflow_dispatch:
 
@@ -19,32 +19,32 @@ jobs:
       
       - name: Fetch calendar and extract today's day
         run: |
+          # Set timezone to Malaysia so date commands return MYT date
+          export TZ=Asia/Kuala_Lumpur
+
           # Fetch the iCal feed
           curl -L "https://calendar.google.com/calendar/ical/iskl.edu.my_7fqt0f2sj8odprhnalgdsa1a5k%40group.calendar.google.com/public/basic.ics" -o calendar.ics
           
-          # Get today's date in YYYYMMDD format
-          TODAY=$(date +%Y%m%d)
-          echo "Today's date: $TODAY"
+          # Get TODAY's date in Malaysia timezone (YYYYMMDD)
+          TODAY=$(TZ=Asia/Kuala_Lumpur date +%Y%m%d)
+          echo "Today's date (MYT): $TODAY"
           
-          # ✅ Export TODAY so next steps can use it
+          # Export TODAY so next steps can use it
           echo "TODAY=$TODAY" >> $GITHUB_ENV
           
           # Look for today's all-day event containing "Day"
           DAY_EVENT=$(grep -B5 -A5 "DTSTART;VALUE=DATE:$TODAY" calendar.ics | grep "SUMMARY" | grep -i "day" | head -1 | sed 's/SUMMARY://' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
           
-          # If found, use it
+          # If found, use it; otherwise default to "Day 1"
           if [ ! -z "$DAY_EVENT" ]; then
             echo "Day event found: $DAY_EVENT"
           else
-            # If no event today, default to "Day 1"
             DAY_EVENT="Day 1"
-            echo "No Day event found for today, using default: Day 1"
+            echo "No Day event found for today, defaulting to: Day 1"
           fi
           
-          # Create JSON file
+          # Write day.json
           echo "{\"day\":\"$DAY_EVENT\",\"date\":\"$TODAY\"}" > day.json
-          
-          # Show the result
           cat day.json
       
       - name: Commit and push if changed
@@ -53,12 +53,10 @@ jobs:
           git config user.email "actions@github.com"
           git add day.json
           
-          # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            # ✅ $TODAY now available via GITHUB_ENV
-            git commit -m "Update day.json for $TODAY"
+            git commit -m "Update day.json for ${{ env.TODAY }}"
             git push
             echo "Changes pushed successfully"
           fi

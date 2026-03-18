@@ -28,10 +28,8 @@
 </head>
 <body>
     <div id="dayLabel"></div>
-
     <script>
-        // ⬇️ Paste your deployed GAS web app URL here
-        const GAS_URL = https://script.google.com/macros/s/AKfycbxAZrZxO8S17_Vmr1UUJdnOjqKNYUNNjNgx2RZAIuVywPvED9hfFnopf91BFM-KuRlqWQ/exec;
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxAZrZxO8S17_Vmr1UUJdnOjqKNYUNNjNgx2RZAIuVywPvED9hfFnopf91BFM-KuRlqWQ/exec';
 
         async function updateDay() {
             try {
@@ -49,9 +47,8 @@
         }
 
         updateDay();
-        setInterval(updateDay, 60 * 60 * 1000); // refresh every hour
+        setInterval(updateDay, 60 * 60 * 1000);
 
-        // Reload at MYT midnight
         function msUntilMidnightMYT() {
             const myt = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
             const midnight = new Date(myt);

@@ -6,7 +6,6 @@
     <title>Day Display</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             background: transparent;
             overflow: hidden;
@@ -17,7 +16,6 @@
             justify-content: center;
             font-family: Arial, Helvetica, sans-serif;
         }
-
         #dayLabel {
             color: white;
             font-size: 10vw;
@@ -32,93 +30,30 @@
     <div id="dayLabel"></div>
 
     <script>
-        // ─── CONFIG ────────────────────────────────────────────────────────────
-        const ICAL_URL = 'https://calendar.google.com/calendar/ical/iskl.edu.my_7fqt0f2sj8odprhnalgdsa1a5k%40group.calendar.google.com/public/basic.ics';
-
-        // CORS proxies tried in order — first one that works wins
-        const PROXIES = [
-            url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            url => `https://thingproxy.freeboard.io/fetch/${url}`
-        ];
-
-        const FALLBACK_TEXT = '';   // shown if no Day event found today
-        const REFRESH_MS    = 60 * 60 * 1000;  // re-fetch every hour
-        // ───────────────────────────────────────────────────────────────────────
-
-        function todayMYT() {
-            // Get current date in Asia/Kuala_Lumpur (MYT = UTC+8)
-            const now = new Date();
-            const myt = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
-            const y = myt.getFullYear();
-            const m = String(myt.getMonth() + 1).padStart(2, '0');
-            const d = String(myt.getDate()).padStart(2, '0');
-            return `${y}${m}${d}`;
-        }
-
-        function parseIcal(text, today) {
-            // Split into VEVENT blocks
-            const events = text.split('BEGIN:VEVENT');
-            for (let i = 1; i < events.length; i++) {
-                const block = events[i];
-
-                // Match all-day events: DTSTART;VALUE=DATE:YYYYMMDD
-                const dateMatch = block.match(/DTSTART;VALUE=DATE:(\d{8})/);
-                if (!dateMatch) continue;
-                if (dateMatch[1] !== today) continue;
-
-                // Get SUMMARY line (may be folded with leading whitespace on next line)
-                const summaryMatch = block.match(/SUMMARY:([\s\S]*?)(?:\r?\n(?![  \t]))/);
-                if (!summaryMatch) continue;
-
-                // Unfold: join continuation lines (lines starting with space/tab)
-                const summary = summaryMatch[1]
-                    .replace(/\r?\n[ \t]/g, '')  // unfold RFC 5545 folding
-                    .trim();
-
-                if (/day\s*\d/i.test(summary)) {
-                    return summary;
-                }
-            }
-            return null;
-        }
-
-        async function fetchWithProxy(proxyFn, url) {
-            const res = await fetch(proxyFn(url), { cache: 'no-store' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.text();
-        }
+        // ⬇️ Paste your deployed GAS web app URL here
+        const GAS_URL = https://script.google.com/macros/s/AKfycbxAZrZxO8S17_Vmr1UUJdnOjqKNYUNNjNgx2RZAIuVywPvED9hfFnopf91BFM-KuRlqWQ/exec;
 
         async function updateDay() {
-            const today = todayMYT();
-            let found = null;
-
-            for (const proxy of PROXIES) {
-                try {
-                    const ical = await fetchWithProxy(proxy, ICAL_URL);
-                    found = parseIcal(ical, today);
-                    break; // success — stop trying proxies
-                } catch (e) {
-                    console.warn('Proxy failed, trying next...', e.message);
-                }
+            try {
+                const res = await fetch(GAS_URL + '?t=' + Date.now());
+                const data = await res.json();
+                const label = document.getElementById('dayLabel');
+                label.style.opacity = 0;
+                setTimeout(() => {
+                    label.textContent = data.day || '';
+                    label.style.opacity = 1;
+                }, 300);
+            } catch (e) {
+                console.error('Failed to fetch day:', e);
             }
-
-            const label = document.getElementById('dayLabel');
-            label.style.opacity = 0;
-            setTimeout(() => {
-                label.textContent = found || FALLBACK_TEXT;
-                label.style.opacity = 1;
-            }, 400);
         }
 
-        // ── Run ────────────────────────────────────────────────────────────────
         updateDay();
-        setInterval(updateDay, REFRESH_MS);
+        setInterval(updateDay, 60 * 60 * 1000); // refresh every hour
 
         // Reload at MYT midnight
         function msUntilMidnightMYT() {
-            const now = new Date();
-            const myt = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+            const myt = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
             const midnight = new Date(myt);
             midnight.setHours(24, 0, 0, 0);
             return midnight - myt;
